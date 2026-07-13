@@ -19,7 +19,7 @@ export default async function handler(req, res) {
         // TESTING: using Resend's shared sender since netlinkagencies.linkpc.net
         // isn't verified yet. Swap back to the noreply@netlinkagencies... address
         // once that domain shows "Verified" in the Resend dashboard.
-        from: 'Meridian Chat <onboarding@resend.dev>',
+        from: 'Meridian Chat <noreply@netlinkagencies.linkpc.net>',
         to: [to],
         subject: 'Your Meridian Chat verification code',
         html: `<p>Your verification code is:</p><h2 style="letter-spacing:4px;">${code}</h2><p>If you didn't request this, you can ignore this email.</p>`
