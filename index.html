@@ -772,7 +772,7 @@ el('email-verify-btn').addEventListener('click', async () => {
   } catch (err) {
     console.error('Email send error:', err);
     setButtonLoading(btn, false);
-    el('verify-error').textContent = "Couldn't send the email code. Check your EmailJS setup and try again.";
+    el('verify-error').textContent = "Couldn't send the code: " + (err.message || 'Server error') + '. Check the browser console and Vercel function logs.';
   }
 });
 
