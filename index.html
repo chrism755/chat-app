@@ -325,7 +325,8 @@ el('auth-submit-btn').addEventListener('click', async () => {
       await auth.signInWithEmailAndPassword(fakeEmail, password);
     }
   } catch (err) {
-    el('auth-error').textContent = friendlyError(err.code);
+    console.error('Auth error:', err.code, err.message);
+    el('auth-error').textContent = friendlyError(err.code) + (err.code ? ' (' + err.code + ')' : '');
   }
 });
 
