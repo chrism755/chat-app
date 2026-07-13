@@ -467,6 +467,9 @@ function listenToChats() {
         div.addEventListener('click', () => openConversation(doc.id, otherName, otherColor));
         list.appendChild(div);
       });
+    }, (err) => {
+      console.error('listenToChats error:', err.code, err.message);
+      alert('Chat list error: ' + (err.code || err.message));
     });
 }
 
