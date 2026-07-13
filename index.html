@@ -80,6 +80,39 @@
   }
   #welcome-screen .agree-btn:active { background: var(--green-dark); }
 
+  /* ---------- Phone number screen ---------- */
+  #phone-screen { display: none; flex-direction: column; height: 100%; background: #0b0f10; padding: 24px 24px 32px; }
+  .phone-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+  .phone-top button { background: none; border: none; color: #d0d5d5; font-size: 20px; }
+  #phone-screen h1 { color: #e9edee; font-size: 24px; font-weight: 500; margin-bottom: 10px; }
+  #phone-screen .phone-sub { color: #8c9899; font-size: 13px; line-height: 1.5; margin-bottom: 36px; }
+  .country-row { display: flex; align-items: center; justify-content: center; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid #2a3235; margin-bottom: 28px; cursor: pointer; }
+  .country-row .name { color: #e9edee; font-size: 16px; }
+  .country-row .arrow { color: var(--green); font-size: 12px; }
+  .phone-input-row { display: flex; gap: 14px; margin-bottom: 40px; }
+  .phone-code-box { display: flex; align-items: center; padding-bottom: 8px; border-bottom: 1px solid var(--green); color: #e9edee; font-size: 16px; }
+  .phone-number-box { flex: 1; padding-bottom: 8px; border-bottom: 1px solid var(--green); }
+  .phone-number-box input { width: 100%; background: none; border: none; color: #e9edee; font-size: 16px; outline: none; }
+  .phone-number-box input::placeholder { color: #5a6366; }
+  #phone-next-btn { width: 100%; padding: 15px; border: none; border-radius: 26px; background: #2a3235; color: #5a6366; font-size: 16px; font-weight: 600; cursor: not-allowed; margin-top: auto; }
+  #phone-next-btn.active { background: var(--green); color: #fff; cursor: pointer; }
+  #phone-next-btn.active:active { background: var(--green-dark); }
+
+  /* ---------- Country picker screen ---------- */
+  #country-screen { display: none; flex-direction: column; height: 100%; background: #0b0f10; }
+  .country-top { display: flex; align-items: center; padding: 16px; gap: 16px; }
+  .country-top button { background: none; border: none; color: #e9edee; font-size: 20px; }
+  .country-top h2 { flex: 1; color: #e9edee; font-size: 18px; font-weight: 500; }
+  #country-search-box { padding: 0 16px 12px; display: none; }
+  #country-search-box input { width: 100%; padding: 10px 14px; border-radius: 8px; border: none; background: #1f2628; color: #e9edee; font-size: 15px; }
+  #country-list { flex: 1; overflow-y: auto; }
+  .country-item { display: flex; align-items: center; padding: 12px 16px; gap: 14px; cursor: pointer; }
+  .country-item .flag { font-size: 24px; line-height: 1; }
+  .country-item .cname { flex: 1; color: #e9edee; font-size: 16px; }
+  .country-item.selected .cname { color: var(--green); }
+  .country-item .ccode { color: #8c9899; font-size: 15px; }
+  .country-item .check { color: var(--green); font-size: 16px; margin-left: 8px; }
+
   /* ---------- Auth screen ---------- */
   #auth-screen {
     height: 100%;
@@ -306,6 +339,40 @@
     <button class="agree-btn" id="welcome-agree-btn">Agree and continue</button>
   </div>
 
+  <!-- PHONE NUMBER SCREEN -->
+  <div id="phone-screen">
+    <div class="phone-top">
+      <button id="phone-back-btn">←</button>
+      <button>⋮</button>
+    </div>
+    <h1>Enter your phone number</h1>
+    <p class="phone-sub">Meridian Chat will need to verify your phone number. Carrier charges may apply.</p>
+    <div class="country-row" id="phone-country-select">
+      <span class="name" id="phone-country-name">Kenya</span>
+      <span class="arrow">▾</span>
+    </div>
+    <div class="phone-input-row">
+      <div class="phone-code-box">+<span id="phone-dial-code">254</span></div>
+      <div class="phone-number-box">
+        <input id="phone-number-input" type="tel" inputmode="numeric" placeholder="Phone number" />
+      </div>
+    </div>
+    <button id="phone-next-btn">Next</button>
+  </div>
+
+  <!-- COUNTRY PICKER SCREEN -->
+  <div id="country-screen">
+    <div class="country-top">
+      <button id="country-back-btn">←</button>
+      <h2>Choose a country</h2>
+      <button id="country-search-toggle-btn">🔍</button>
+    </div>
+    <div id="country-search-box">
+      <input id="country-search-input" type="text" placeholder="Search country" />
+    </div>
+    <div id="country-list"></div>
+  </div>
+
   <!-- AUTH SCREEN -->
   <div id="auth-screen">
     <h1>Meridian Chat</h1>
@@ -385,9 +452,71 @@ function colorFor(str) {
 }
 function initials(name) { return (name || '?').slice(0, 2).toUpperCase(); }
 
+// ============ COUNTRY DATA (name, ISO2, dial code) ============
+const COUNTRIES = [
+["Afghanistan","AF","93"],["Albania","AL","355"],["Algeria","DZ","213"],["Andorra","AD","376"],
+["Angola","AO","244"],["Antigua and Barbuda","AG","1268"],["Argentina","AR","54"],["Armenia","AM","374"],
+["Australia","AU","61"],["Austria","AT","43"],["Azerbaijan","AZ","994"],["Bahamas","BS","1242"],
+["Bahrain","BH","973"],["Bangladesh","BD","880"],["Barbados","BB","1246"],["Belarus","BY","375"],
+["Belgium","BE","32"],["Belize","BZ","501"],["Benin","BJ","229"],["Bhutan","BT","975"],
+["Bolivia","BO","591"],["Bosnia and Herzegovina","BA","387"],["Botswana","BW","267"],["Brazil","BR","55"],
+["Brunei","BN","673"],["Bulgaria","BG","359"],["Burkina Faso","BF","226"],["Burundi","BI","257"],
+["Cabo Verde","CV","238"],["Cambodia","KH","855"],["Cameroon","CM","237"],["Canada","CA","1"],
+["Central African Republic","CF","236"],["Chad","TD","235"],["Chile","CL","56"],["China","CN","86"],
+["Colombia","CO","57"],["Comoros","KM","269"],["Congo (DRC)","CD","243"],["Congo (Republic)","CG","242"],
+["Costa Rica","CR","506"],["Croatia","HR","385"],["Cuba","CU","53"],["Cyprus","CY","357"],
+["Czechia","CZ","420"],["Denmark","DK","45"],["Djibouti","DJ","253"],["Dominica","DM","1767"],
+["Dominican Republic","DO","1809"],["Ecuador","EC","593"],["Egypt","EG","20"],["El Salvador","SV","503"],
+["Equatorial Guinea","GQ","240"],["Eritrea","ER","291"],["Estonia","EE","372"],["Eswatini","SZ","268"],
+["Ethiopia","ET","251"],["Fiji","FJ","679"],["Finland","FI","358"],["France","FR","33"],
+["Gabon","GA","241"],["Gambia","GM","220"],["Georgia","GE","995"],["Germany","DE","49"],
+["Ghana","GH","233"],["Greece","GR","30"],["Grenada","GD","1473"],["Guatemala","GT","502"],
+["Guinea","GN","224"],["Guinea-Bissau","GW","245"],["Guyana","GY","592"],["Haiti","HT","509"],
+["Holy See","VA","379"],["Honduras","HN","504"],["Hungary","HU","36"],["Iceland","IS","354"],
+["India","IN","91"],["Indonesia","ID","62"],["Iran","IR","98"],["Iraq","IQ","964"],
+["Ireland","IE","353"],["Israel","IL","972"],["Italy","IT","39"],["Jamaica","JM","1876"],
+["Japan","JP","81"],["Jordan","JO","962"],["Kazakhstan","KZ","7"],["Kenya","KE","254"],
+["Kiribati","KI","686"],["Korea, North","KP","850"],["Korea, South","KR","82"],["Kuwait","KW","965"],
+["Kyrgyzstan","KG","996"],["Laos","LA","856"],["Latvia","LV","371"],["Lebanon","LB","961"],
+["Lesotho","LS","266"],["Liberia","LR","231"],["Libya","LY","218"],["Liechtenstein","LI","423"],
+["Lithuania","LT","370"],["Luxembourg","LU","352"],["Madagascar","MG","261"],["Malawi","MW","265"],
+["Malaysia","MY","60"],["Maldives","MV","960"],["Mali","ML","223"],["Malta","MT","356"],
+["Marshall Islands","MH","692"],["Mauritania","MR","222"],["Mauritius","MU","230"],["Mexico","MX","52"],
+["Micronesia","FM","691"],["Moldova","MD","373"],["Monaco","MC","377"],["Mongolia","MN","976"],
+["Montenegro","ME","382"],["Morocco","MA","212"],["Mozambique","MZ","258"],["Myanmar","MM","95"],
+["Namibia","NA","264"],["Nauru","NR","674"],["Nepal","NP","977"],["Netherlands","NL","31"],
+["New Zealand","NZ","64"],["Nicaragua","NI","505"],["Niger","NE","227"],["Nigeria","NG","234"],
+["North Macedonia","MK","389"],["Norway","NO","47"],["Oman","OM","968"],["Pakistan","PK","92"],
+["Palau","PW","680"],["Palestine","PS","970"],["Panama","PA","507"],["Papua New Guinea","PG","675"],
+["Paraguay","PY","595"],["Peru","PE","51"],["Philippines","PH","63"],["Poland","PL","48"],
+["Portugal","PT","351"],["Qatar","QA","974"],["Romania","RO","40"],["Russia","RU","7"],
+["Rwanda","RW","250"],["Saint Kitts and Nevis","KN","1869"],["Saint Lucia","LC","1758"],
+["Saint Vincent and the Grenadines","VC","1784"],["Samoa","WS","685"],["San Marino","SM","378"],
+["Sao Tome and Principe","ST","239"],["Saudi Arabia","SA","966"],["Senegal","SN","221"],
+["Serbia","RS","381"],["Seychelles","SC","248"],["Sierra Leone","SL","232"],["Singapore","SG","65"],
+["Slovakia","SK","421"],["Slovenia","SI","386"],["Solomon Islands","SB","677"],["Somalia","SO","252"],
+["South Africa","ZA","27"],["South Sudan","SS","211"],["Spain","ES","34"],["Sri Lanka","LK","94"],
+["Sudan","SD","249"],["Suriname","SR","597"],["Sweden","SE","46"],["Switzerland","CH","41"],
+["Syria","SY","963"],["Taiwan","TW","886"],["Tajikistan","TJ","992"],["Tanzania","TZ","255"],
+["Thailand","TH","66"],["Timor-Leste","TL","670"],["Togo","TG","228"],["Tonga","TO","676"],
+["Trinidad and Tobago","TT","1868"],["Tunisia","TN","216"],["Turkey","TR","90"],["Turkmenistan","TM","993"],
+["Tuvalu","TV","688"],["Uganda","UG","256"],["Ukraine","UA","380"],["United Arab Emirates","AE","971"],
+["United Kingdom","GB","44"],["United States","US","1"],["Uruguay","UY","598"],["Uzbekistan","UZ","998"],
+["Vanuatu","VU","678"],["Venezuela","VE","58"],["Vietnam","VN","84"],["Yemen","YE","967"],
+["Zambia","ZM","260"],["Zimbabwe","ZW","263"]
+];
+
+function flagEmoji(iso2) {
+  return iso2.toUpperCase().replace(/./g, ch => String.fromCodePoint(ch.charCodeAt(0) + 127397));
+}
+
+let selectedCountry = { name: 'Kenya', iso2: 'KE', dial: '254' };
+
 // ============ ELEMENTS ============
 const el = (id) => document.getElementById(id);
 const welcomeScreen = el('welcome-screen');
+const phoneScreen = el('phone-screen');
+const countryScreen = el('country-screen');
 const authScreen = el('auth-screen');
 const chatsScreen = el('chats-screen');
 const convoScreen = el('convo-screen');
@@ -395,8 +524,80 @@ let hasSeenWelcome = false;
 
 el('welcome-agree-btn').addEventListener('click', () => {
   hasSeenWelcome = true;
+  showScreen('phone');
+});
+
+// ============ PHONE NUMBER SCREEN ============
+el('phone-back-btn').addEventListener('click', () => showScreen('welcome'));
+
+el('phone-number-input').addEventListener('input', () => {
+  const btn = el('phone-next-btn');
+  const valid = el('phone-number-input').value.trim().length >= 6;
+  btn.classList.toggle('active', valid);
+});
+
+el('phone-next-btn').addEventListener('click', () => {
+  if (!el('phone-next-btn').classList.contains('active')) return;
+  // Phone number captured in selectedCountry.dial + el('phone-number-input').value
   showScreen('auth');
 });
+
+el('phone-country-select').addEventListener('click', () => {
+  renderCountryList();
+  showScreen('country');
+});
+
+// ============ COUNTRY PICKER SCREEN ============
+el('country-back-btn').addEventListener('click', () => showScreen('phone'));
+
+el('country-search-toggle-btn').addEventListener('click', () => {
+  const box = el('country-search-box');
+  box.style.display = box.style.display === 'block' ? 'none' : 'block';
+  el('country-search-input').value = '';
+  renderCountryList();
+  if (box.style.display === 'block') el('country-search-input').focus();
+});
+
+el('country-search-input').addEventListener('input', (e) => {
+  renderCountryList(e.target.value.trim().toLowerCase());
+});
+
+function renderCountryList(filter) {
+  const list = el('country-list');
+  list.innerHTML = '';
+
+  let entries = COUNTRIES;
+  if (filter) {
+    entries = COUNTRIES.filter(c => c[0].toLowerCase().includes(filter) || c[2].includes(filter));
+  } else {
+    // Pin the currently selected country to the top, like the reference design.
+    const rest = COUNTRIES.filter(c => c[1] !== selectedCountry.iso2);
+    entries = [[selectedCountry.name, selectedCountry.iso2, selectedCountry.dial], ...rest];
+  }
+
+  entries.forEach(([name, iso2, dial]) => {
+    const isSelected = iso2 === selectedCountry.iso2;
+    const div = document.createElement('div');
+    div.className = 'country-item' + (isSelected ? ' selected' : '');
+    div.innerHTML = `
+      <span class="flag">${flagEmoji(iso2)}</span>
+      <span class="cname">${escapeHtml(name)}</span>
+      <span class="ccode">+${dial}</span>
+      ${isSelected ? '<span class="check">✓</span>' : ''}
+    `;
+    div.addEventListener('click', () => {
+      selectedCountry = { name, iso2, dial };
+      el('phone-country-name').textContent = name;
+      el('phone-dial-code').textContent = dial;
+      showScreen('phone');
+    });
+    list.appendChild(div);
+  });
+
+  if (entries.length === 0) {
+    list.innerHTML = '<div class="empty-msg">No countries found.</div>';
+  }
+}
 
 // ============ AUTH ============
 el('auth-switch').addEventListener('click', () => {
@@ -471,6 +672,8 @@ auth.onAuthStateChanged(async (user) => {
 
 function showScreen(name) {
   welcomeScreen.style.display = name === 'welcome' ? 'flex' : 'none';
+  phoneScreen.style.display = name === 'phone' ? 'flex' : 'none';
+  countryScreen.style.display = name === 'country' ? 'flex' : 'none';
   authScreen.style.display = name === 'auth' ? 'flex' : 'none';
   chatsScreen.style.display = name === 'chats' ? 'flex' : 'none';
   convoScreen.style.display = name === 'convo' ? 'flex' : 'none';
