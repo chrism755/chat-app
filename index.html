@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>ChatApp</title>
+<style>
+  :root {
+    --green: #25D366;
+    --green-dark: #128C7E;
+    --teal: #075E54;
+    --bg: #ECE5DD;
+    --bubble-me: #DCF8C6;
+    --bubble-them: #FFFFFF;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  #app { height: 100%; display: flex; flex-direction: column; }
+
+  /* ---------- Auth screen ---------- */
+  #auth-screen {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(160deg, var(--teal), var(--green-dark));
+    padding: 24px;
+  }
+  #auth-screen h1 { color: white; font-size: 28px; margin-bottom: 8px; }
+  #auth-screen p.tag { color: #d9f2e6; margin-bottom: 32px; font-size: 14px; }
+  .auth-box {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 340px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  }
+  .auth-box input {
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 12px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    font-size: 16px;
+  }
+  .auth-box button {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    background: var(--green);
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .auth-box button:active { background: var(--green-dark); }
+  .switch-link {
+    text-align: center;
+    margin-top: 14px;
+    font-size: 14px;
+    color: var(--teal);
+  }
+  #auth-error {
+    color: #d32f2f;
+    font-size: 13px;
+    margin-bottom: 10px;
+    min-height: 16px;
+  }
+
+  /* ---------- Chat list screen ---------- */
+  #chats-screen { display: none; flex-direction: column; height: 100%; }
+  .top-bar {
+    background: var(--teal);
+    color: white;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .top-bar h2 { font-size: 20px; }
+  .top-bar button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 22px;
+  }
+  #search-box {
+    padding: 10px 16px;
+    background: white;
+    display: none;
+  }
+  #search-box input {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 20px;
+    border: 1px solid #ddd;
+    font-size: 15px;
+  }
+  #user-results, #chat-list {
+    flex: 1;
+    overflow-y: auto;
+    background: white;
+  }
+  .list-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 18px;
+    margin-right: 14px;
+    flex-shrink: 0;
+  }
+  .item-body { flex: 1; min-width: 0; }
+  .item-name { font-weight: 600; font-size: 16px; }
+  .item-sub { font-size: 13px; color: #777; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .empty-msg { text-align: center; color: #999; padding: 40px 20px; font-size: 14px; }
+
+  /* ---------- Conversation screen ---------- */
+  #convo-screen { display: none; flex-direction: column; height: 100%; }
+  .convo-top {
+    background: var(--teal);
+    color: white;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+  }
+  .back-btn { background: none; border: none; color: white; font-size: 22px; margin-right: 12px; }
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+  }
+  .bubble {
+    max-width: 75%;
+    padding: 8px 12px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    font-size: 15px;
+    line-height: 1.4;
+    word-wrap: break-word;
+  }
+  .bubble.me { align-self: flex-end; background: var(--bubble-me); border-top-right-radius: 2px; }
+  .bubble.them { align-self: flex-start; background: var(--bubble-them); border-top-left-radius: 2px; }
+  .bubble .time { display: block; font-size: 10px; color: #888; margin-top: 4px; text-align: right; }
+  .input-bar {
+    display: flex;
+    padding: 10px;
+    background: #f0f0f0;
+    gap: 8px;
+  }
+  .input-bar input {
+    flex: 1;
+    padding: 12px 16px;
+    border-radius: 24px;
+    border: none;
+    font-size: 15px;
+  }
+  .input-bar button {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: none;
+    background: var(--green);
+    color: white;
+    font-size: 18px;
+  }
+  .fab {
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--green);
+    color: white;
+    border: none;
+    font-size: 26px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- AUTH SCREEN -->
+  <div id="auth-screen">
+    <h1>ChatApp</h1>
+    <p class="tag">Simple. Fast. Yours.</p>
+    <div class="auth-box">
+      <div id="auth-error"></div>
+      <input id="auth-username" type="text" placeholder="Username" autocomplete="username" />
+      <input id="auth-password" type="password" placeholder="Password" autocomplete="current-password" />
+      <button id="auth-submit-btn">Log In</button>
+      <p class="switch-link" id="auth-switch">Don't have an account? <b>Sign Up</b></p>
+    </div>
+  </div>
+
+  <!-- CHAT LIST SCREEN -->
+  <div id="chats-screen">
+    <div class="top-bar">
+      <h2>Chats</h2>
+      <div>
+        <button id="search-toggle-btn">🔍</button>
+        <button id="logout-btn">⏻</button>
+      </div>
+    </div>
+    <div id="search-box">
+      <input id="user-search-input" type="text" placeholder="Search users by username..." />
+    </div>
+    <div id="user-results"></div>
+    <div id="chat-list"><div class="empty-msg">No chats yet. Tap 🔍 to find someone to message.</div></div>
+  </div>
+
+  <!-- CONVERSATION SCREEN -->
+  <div id="convo-screen">
+    <div class="convo-top">
+      <button class="back-btn" id="back-btn">←</button>
+      <div class="avatar" id="convo-avatar" style="width:36px;height:36px;font-size:14px;"></div>
+      <h2 id="convo-name" style="margin-left:10px; font-size:17px;"></h2>
+    </div>
+    <div id="messages"></div>
+    <div class="input-bar">
+      <input id="message-input" type="text" placeholder="Type a message" />
+      <button id="send-btn">➤</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Firebase SDKs (compat = no build tools / bundler needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+// ============ FIREBASE CONFIG ============
+const firebaseConfig = {
+  apiKey: "AIzaSyBGKF5v4cTHcejxUFDe2f7QshS8AwPYq7c",
+  authDomain: "chat-app-1e7bd.firebaseapp.com",
+  projectId: "chat-app-1e7bd",
+  storageBucket: "chat-app-1e7bd.firebasestorage.app",
+  messagingSenderId: "778254172862",
+  appId: "1:778254172862:web:c8f2eeede4cf8fd52c54ef"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// ============ STATE ============
+let currentUser = null;       // { uid, username, avatarColor }
+let isSignupMode = false;
+let activeChatId = null;
+let activeChatUnsub = null;
+let chatListUnsub = null;
+
+const COLORS = ['#25D366', '#128C7E', '#34B7F1', '#F15C6D', '#9575CD', '#FF8A65'];
+function colorFor(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  return COLORS[Math.abs(hash) % COLORS.length];
+}
+function initials(name) { return (name || '?').slice(0, 2).toUpperCase(); }
+
+// ============ ELEMENTS ============
+const el = (id) => document.getElementById(id);
+const authScreen = el('auth-screen');
+const chatsScreen = el('chats-screen');
+const convoScreen = el('convo-screen');
+
+// ============ AUTH ============
+el('auth-switch').addEventListener('click', () => {
+  isSignupMode = !isSignupMode;
+  el('auth-submit-btn').textContent = isSignupMode ? 'Sign Up' : 'Log In';
+  el('auth-switch').innerHTML = isSignupMode
+    ? 'Already have an account? <b>Log In</b>'
+    : "Don't have an account? <b>Sign Up</b>";
+  el('auth-error').textContent = '';
+});
+
+el('auth-submit-btn').addEventListener('click', async () => {
+  const username = el('auth-username').value.trim();
+  const password = el('auth-password').value;
+  el('auth-error').textContent = '';
+
+  if (!username || password.length < 6) {
+    el('auth-error').textContent = 'Username required, password must be 6+ characters.';
+    return;
+  }
+
+  // We use a fake internal email since Firebase Auth needs one, but users only ever see/use their username.
+  const fakeEmail = username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@chatapp.local';
+
+  try {
+    if (isSignupMode) {
+      const cred = await auth.createUserWithEmailAndPassword(fakeEmail, password);
+      await db.collection('users').doc(cred.user.uid).set({
+        username,
+        usernameLower: username.toLowerCase(),
+        avatarColor: colorFor(username),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } else {
+      await auth.signInWithEmailAndPassword(fakeEmail, password);
+    }
+  } catch (err) {
+    el('auth-error').textContent = friendlyError(err.code);
+  }
+});
+
+function friendlyError(code) {
+  const map = {
+    'auth/email-already-in-use': 'That username is already taken.',
+    'auth/user-not-found': 'No account with that username.',
+    'auth/wrong-password': 'Incorrect password.',
+    'auth/invalid-email': 'Invalid username.',
+    'auth/weak-password': 'Password must be at least 6 characters.',
+    'auth/invalid-credential': 'Incorrect username or password.'
+  };
+  return map[code] || 'Something went wrong. Try again.';
+}
+
+el('logout-btn').addEventListener('click', () => auth.signOut());
+
+// ============ AUTH STATE LISTENER ============
+auth.onAuthStateChanged(async (user) => {
+  if (user) {
+    const doc = await db.collection('users').doc(user.uid).get();
+    const data = doc.data();
+    currentUser = { uid: user.uid, username: data.username, avatarColor: data.avatarColor };
+    showScreen('chats');
+    listenToChats();
+  } else {
+    currentUser = null;
+    if (chatListUnsub) chatListUnsub();
+    if (activeChatUnsub) activeChatUnsub();
+    showScreen('auth');
+  }
+});
+
+function showScreen(name) {
+  authScreen.style.display = name === 'auth' ? 'flex' : 'none';
+  chatsScreen.style.display = name === 'chats' ? 'flex' : 'none';
+  convoScreen.style.display = name === 'convo' ? 'flex' : 'none';
+}
+
+// ============ USER SEARCH ============
+el('search-toggle-btn').addEventListener('click', () => {
+  const box = el('search-box');
+  box.style.display = box.style.display === 'block' ? 'none' : 'block';
+  el('user-results').innerHTML = '';
+  el('user-search-input').value = '';
+});
+
+let searchTimeout;
+el('user-search-input').addEventListener('input', (e) => {
+  clearTimeout(searchTimeout);
+  const q = e.target.value.trim().toLowerCase();
+  if (!q) { el('user-results').innerHTML = ''; return; }
+  searchTimeout = setTimeout(() => searchUsers(q), 300);
+});
+
+async function searchUsers(q) {
+  const snap = await db.collection('users')
+    .where('usernameLower', '>=', q)
+    .where('usernameLower', '<=', q + '\uf8ff')
+    .limit(15)
+    .get();
+
+  const results = el('user-results');
+  results.innerHTML = '';
+  snap.forEach(doc => {
+    const u = doc.data();
+    if (doc.id === currentUser.uid) return;
+    const div = document.createElement('div');
+    div.className = 'list-item';
+    div.innerHTML = `
+      <div class="avatar" style="background:${u.avatarColor}">${initials(u.username)}</div>
+      <div class="item-body"><div class="item-name">${escapeHtml(u.username)}</div></div>
+    `;
+    div.addEventListener('click', () => startChat(doc.id, u.username, u.avatarColor));
+    results.appendChild(div);
+  });
+  if (snap.empty) results.innerHTML = '<div class="empty-msg">No users found.</div>';
+}
+
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// ============ START / OPEN CHAT ============
+async function startChat(otherUid, otherUsername, otherColor) {
+  const chatId = [currentUser.uid, otherUid].sort().join('_');
+  const chatRef = db.collection('chats').doc(chatId);
+  const doc = await chatRef.get();
+
+  if (!doc.exists) {
+    await chatRef.set({
+      members: [currentUser.uid, otherUid],
+      memberNames: { [currentUser.uid]: currentUser.username, [otherUid]: otherUsername },
+      memberColors: { [currentUser.uid]: currentUser.avatarColor, [otherUid]: otherColor },
+      lastMessage: '',
+      lastMessageTime: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }
+
+  el('search-box').style.display = 'none';
+  el('user-results').innerHTML = '';
+  openConversation(chatId, otherUsername, otherColor);
+}
+
+// ============ CHAT LIST (real-time) ============
+function listenToChats() {
+  chatListUnsub = db.collection('chats')
+    .where('members', 'array-contains', currentUser.uid)
+    .orderBy('lastMessageTime', 'desc')
+    .onSnapshot((snap) => {
+      const list = el('chat-list');
+      if (snap.empty) {
+        list.innerHTML = '<div class="empty-msg">No chats yet. Tap 🔍 to find someone to message.</div>';
+        return;
+      }
+      list.innerHTML = '';
+      snap.forEach(doc => {
+        const chat = doc.data();
+        const otherUid = chat.members.find(m => m !== currentUser.uid);
+        const otherName = chat.memberNames[otherUid];
+        const otherColor = chat.memberColors[otherUid];
+        const div = document.createElement('div');
+        div.className = 'list-item';
+        div.innerHTML = `
+          <div class="avatar" style="background:${otherColor}">${initials(otherName)}</div>
+          <div class="item-body">
+            <div class="item-name">${escapeHtml(otherName)}</div>
+            <div class="item-sub">${escapeHtml(chat.lastMessage || 'Say hello 👋')}</div>
+          </div>
+        `;
+        div.addEventListener('click', () => openConversation(doc.id, otherName, otherColor));
+        list.appendChild(div);
+      });
+    });
+}
+
+// ============ CONVERSATION (real-time) ============
+function openConversation(chatId, otherName, otherColor) {
+  activeChatId = chatId;
+  el('convo-name').textContent = otherName;
+  el('convo-avatar').textContent = initials(otherName);
+  el('convo-avatar').style.background = otherColor;
+  el('messages').innerHTML = '';
+  showScreen('convo');
+
+  if (activeChatUnsub) activeChatUnsub();
+  activeChatUnsub = db.collection('chats').doc(chatId).collection('messages')
+    .orderBy('createdAt', 'asc')
+    .onSnapshot((snap) => {
+      const container = el('messages');
+      container.innerHTML = '';
+      snap.forEach(doc => {
+        const m = doc.data();
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble ' + (m.senderId === currentUser.uid ? 'me' : 'them');
+        const time = m.createdAt ? m.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+        bubble.innerHTML = `${escapeHtml(m.text)}<span class="time">${time}</span>`;
+        container.appendChild(bubble);
+      });
+      container.scrollTop = container.scrollHeight;
+    });
+}
+
+el('back-btn').addEventListener('click', () => {
+  if (activeChatUnsub) activeChatUnsub();
+  activeChatId = null;
+  showScreen('chats');
+});
+
+el('send-btn').addEventListener('click', sendMessage);
+el('message-input').addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+async function sendMessage() {
+  const input = el('message-input');
+  const text = input.value.trim();
+  if (!text || !activeChatId) return;
+  input.value = '';
+
+  const chatRef = db.collection('chats').doc(activeChatId);
+  await chatRef.collection('messages').add({
+    senderId: currentUser.uid,
+    text,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  await chatRef.update({
+    lastMessage: text,
+    lastMessageTime: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+</script>
+</body>
+</html>
