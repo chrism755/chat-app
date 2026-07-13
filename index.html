@@ -98,6 +98,29 @@
   #phone-next-btn.active { background: var(--green); color: #fff; cursor: pointer; }
   #phone-next-btn.active:active { background: var(--green-dark); }
 
+  /* ---------- Confirm number overlay ---------- */
+  #confirm-number-overlay { display: none; position: fixed; inset: 0; z-index: 50; }
+  .confirm-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.6); }
+  .confirm-sheet {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: #1c2426; border-radius: 14px 14px 0 0; padding: 24px 20px 32px;
+  }
+  .confirm-label { color: #d0d5d5; font-size: 14px; margin-bottom: 10px; }
+  .confirm-number { color: #e9edee; font-size: 20px; font-weight: 600; margin-bottom: 24px; }
+  .confirm-actions { display: flex; justify-content: flex-end; gap: 28px; }
+  .confirm-actions button { background: none; border: none; color: var(--green); font-size: 15px; font-weight: 600; cursor: pointer; }
+
+  /* ---------- Verify code screen ---------- */
+  #verify-screen { display: none; flex-direction: column; height: 100%; background: #0b0f10; padding: 24px 24px 32px; }
+  .code-boxes { display: flex; gap: 10px; justify-content: center; margin: 30px 0 18px; }
+  .code-box {
+    width: 40px; height: 48px; text-align: center; font-size: 20px; color: #e9edee;
+    background: none; border: none; border-bottom: 2px solid #2a3235; outline: none;
+  }
+  .code-box:focus { border-bottom-color: var(--green); }
+  #verify-sub b { color: #e9edee; }
+  #resend-link { text-align: center; }
+
   /* ---------- Country picker screen ---------- */
   #country-screen { display: none; flex-direction: column; height: 100%; background: #0b0f10; }
   .country-top { display: flex; align-items: center; padding: 16px; gap: 16px; }
@@ -360,6 +383,40 @@
     <button id="phone-next-btn">Next</button>
   </div>
 
+  <!-- CONFIRM NUMBER OVERLAY -->
+  <div id="confirm-number-overlay">
+    <div class="confirm-backdrop"></div>
+    <div class="confirm-sheet">
+      <p class="confirm-label">Is this the correct number?</p>
+      <div class="confirm-number" id="confirm-number-display"></div>
+      <div class="confirm-actions">
+        <button id="confirm-edit-btn">Edit</button>
+        <button id="confirm-yes-btn">Yes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VERIFY CODE SCREEN -->
+  <div id="verify-screen">
+    <div class="phone-top">
+      <button id="verify-back-btn">←</button>
+      <button>⋮</button>
+    </div>
+    <h1>Verifying your number</h1>
+    <p class="phone-sub" id="verify-sub">Waiting to automatically detect a 6-digit code sent by SMS to <b id="verify-number-display"></b>.</p>
+    <div class="code-boxes" id="code-boxes">
+      <input class="code-box" maxlength="1" inputmode="numeric" type="tel" data-index="0" />
+      <input class="code-box" maxlength="1" inputmode="numeric" type="tel" data-index="1" />
+      <input class="code-box" maxlength="1" inputmode="numeric" type="tel" data-index="2" />
+      <input class="code-box" maxlength="1" inputmode="numeric" type="tel" data-index="3" />
+      <input class="code-box" maxlength="1" inputmode="numeric" type="tel" data-index="4" />
+      <input class="code-box" maxlength="1" inputmode="numeric" type="tel" data-index="5" />
+    </div>
+    <div id="verify-error" style="color:#ff8a80; font-size:13px; min-height:16px; text-align:center; margin-bottom:12px;"></div>
+    <p class="phone-sub" id="resend-link">Didn't receive code? Resend</p>
+  </div>
+  <div id="recaptcha-container"></div>
+
   <!-- COUNTRY PICKER SCREEN -->
   <div id="country-screen">
     <div class="country-top">
@@ -516,11 +573,14 @@ let selectedCountry = { name: 'Kenya', iso2: 'KE', dial: '254' };
 const el = (id) => document.getElementById(id);
 const welcomeScreen = el('welcome-screen');
 const phoneScreen = el('phone-screen');
+const verifyScreen = el('verify-screen');
 const countryScreen = el('country-screen');
 const authScreen = el('auth-screen');
 const chatsScreen = el('chats-screen');
 const convoScreen = el('convo-screen');
 let hasSeenWelcome = false;
+let recaptchaVerifier = null;
+let confirmationResult = null;
 
 el('welcome-agree-btn').addEventListener('click', () => {
   hasSeenWelcome = true;
@@ -538,13 +598,110 @@ el('phone-number-input').addEventListener('input', () => {
 
 el('phone-next-btn').addEventListener('click', () => {
   if (!el('phone-next-btn').classList.contains('active')) return;
-  // Phone number captured in selectedCountry.dial + el('phone-number-input').value
-  showScreen('auth');
+  const fullNumber = '+' + selectedCountry.dial + ' ' + el('phone-number-input').value.trim();
+  el('confirm-number-display').textContent = fullNumber;
+  el('confirm-number-overlay').style.display = 'block';
 });
 
 el('phone-country-select').addEventListener('click', () => {
   renderCountryList();
   showScreen('country');
+});
+
+// ============ CONFIRM NUMBER OVERLAY ============
+el('confirm-edit-btn').addEventListener('click', () => {
+  el('confirm-number-overlay').style.display = 'none';
+});
+
+el('confirm-yes-btn').addEventListener('click', () => {
+  el('confirm-number-overlay').style.display = 'none';
+  sendVerificationCode();
+});
+
+// ============ SEND SMS CODE (Firebase Phone Auth) ============
+function getFullPhoneNumber() {
+  return '+' + selectedCountry.dial + el('phone-number-input').value.trim().replace(/[^0-9]/g, '');
+}
+
+function friendlyPhoneError(code) {
+  const map = {
+    'auth/invalid-phone-number': 'That phone number looks invalid.',
+    'auth/missing-phone-number': 'Enter a phone number first.',
+    'auth/quota-exceeded': 'SMS quota exceeded for this project. Try again later.',
+    'auth/too-many-requests': 'Too many attempts. Try again later.',
+    'auth/invalid-verification-code': 'Incorrect code. Try again.',
+    'auth/code-expired': 'This code expired. Request a new one.',
+    'auth/captcha-check-failed': 'Verification failed. Please retry.'
+  };
+  return map[code] || 'Something went wrong. Try again.';
+}
+
+async function sendVerificationCode() {
+  const fullNumber = getFullPhoneNumber();
+  el('verify-number-display').textContent = fullNumber;
+  el('verify-error').textContent = '';
+  clearCodeBoxes();
+  showScreen('verify');
+
+  try {
+    if (!recaptchaVerifier) {
+      recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size: 'invisible' });
+    }
+    confirmationResult = await auth.signInWithPhoneNumber(fullNumber, recaptchaVerifier);
+    codeBoxes[0].focus();
+  } catch (err) {
+    console.error('SMS send error:', err.code, err.message);
+    el('verify-error').textContent = friendlyPhoneError(err.code) + (err.code ? ' (' + err.code + ')' : '');
+    // Reset the captcha so the next attempt can render a fresh one.
+    if (recaptchaVerifier) { recaptchaVerifier.clear(); recaptchaVerifier = null; }
+  }
+}
+
+// ============ VERIFY CODE SCREEN ============
+const codeBoxes = Array.from(document.querySelectorAll('.code-box'));
+
+function clearCodeBoxes() {
+  codeBoxes.forEach(box => { box.value = ''; });
+}
+
+codeBoxes.forEach((box, i) => {
+  box.addEventListener('input', () => {
+    box.value = box.value.replace(/[^0-9]/g, '').slice(0, 1);
+    if (box.value && i < codeBoxes.length - 1) codeBoxes[i + 1].focus();
+    if (codeBoxes.every(b => b.value)) verifyCode();
+  });
+  box.addEventListener('keydown', (e) => {
+    if (e.key === 'Backspace' && !box.value && i > 0) codeBoxes[i - 1].focus();
+  });
+});
+
+async function verifyCode() {
+  const code = codeBoxes.map(b => b.value).join('');
+  if (code.length < 6 || !confirmationResult) return;
+  el('verify-error').textContent = '';
+  try {
+    await confirmationResult.confirm(code);
+    // Phone number confirmed. Sign out of the phone-auth session so the
+    // existing username/password flow below can create/sign in a clean account.
+    await auth.signOut();
+    showScreen('auth');
+  } catch (err) {
+    console.error('Verify code error:', err.code, err.message);
+    el('verify-error').textContent = friendlyPhoneError(err.code) + (err.code ? ' (' + err.code + ')' : '');
+    clearCodeBoxes();
+    codeBoxes[0].focus();
+  }
+}
+
+el('resend-link').addEventListener('click', () => {
+  if (recaptchaVerifier) { recaptchaVerifier.clear(); recaptchaVerifier = null; }
+  sendVerificationCode();
+});
+
+el('verify-back-btn').addEventListener('click', () => {
+  if (recaptchaVerifier) { recaptchaVerifier.clear(); recaptchaVerifier = null; }
+  clearCodeBoxes();
+  showScreen('phone');
 });
 
 // ============ COUNTRY PICKER SCREEN ============
@@ -673,6 +830,7 @@ auth.onAuthStateChanged(async (user) => {
 function showScreen(name) {
   welcomeScreen.style.display = name === 'welcome' ? 'flex' : 'none';
   phoneScreen.style.display = name === 'phone' ? 'flex' : 'none';
+  verifyScreen.style.display = name === 'verify' ? 'flex' : 'none';
   countryScreen.style.display = name === 'country' ? 'flex' : 'none';
   authScreen.style.display = name === 'auth' ? 'flex' : 'none';
   chatsScreen.style.display = name === 'chats' ? 'flex' : 'none';
