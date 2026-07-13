@@ -414,23 +414,28 @@ function escapeHtml(str) {
 
 // ============ START / OPEN CHAT ============
 async function startChat(otherUid, otherUsername, otherColor) {
-  const chatId = [currentUser.uid, otherUid].sort().join('_');
-  const chatRef = db.collection('chats').doc(chatId);
-  const doc = await chatRef.get();
+  try {
+    const chatId = [currentUser.uid, otherUid].sort().join('_');
+    const chatRef = db.collection('chats').doc(chatId);
+    const doc = await chatRef.get();
 
-  if (!doc.exists) {
-    await chatRef.set({
-      members: [currentUser.uid, otherUid],
-      memberNames: { [currentUser.uid]: currentUser.username, [otherUid]: otherUsername },
-      memberColors: { [currentUser.uid]: currentUser.avatarColor, [otherUid]: otherColor },
-      lastMessage: '',
-      lastMessageTime: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    if (!doc.exists) {
+      await chatRef.set({
+        members: [currentUser.uid, otherUid],
+        memberNames: { [currentUser.uid]: currentUser.username, [otherUid]: otherUsername },
+        memberColors: { [currentUser.uid]: currentUser.avatarColor, [otherUid]: otherColor },
+        lastMessage: '',
+        lastMessageTime: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    el('search-box').style.display = 'none';
+    el('user-results').innerHTML = '';
+    openConversation(chatId, otherUsername, otherColor);
+  } catch (err) {
+    console.error('startChat error:', err.code, err.message);
+    alert('Could not start chat: ' + (err.code || err.message));
   }
-
-  el('search-box').style.display = 'none';
-  el('user-results').innerHTML = '';
-  openConversation(chatId, otherUsername, otherColor);
 }
 
 // ============ CHAT LIST (real-time) ============
